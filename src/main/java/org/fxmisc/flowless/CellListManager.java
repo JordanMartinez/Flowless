@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.input.ScrollEvent;
 
@@ -24,6 +25,7 @@ final class CellListManager<T, C extends Cell<T, ? extends Node>> {
     private final MemoizationList<C> cells;
     private final LiveList<C> presentCells;
     private final LiveList<Node> cellNodes;
+    private final EventHandler<ScrollEvent> pushToOwner = this::pushScrollEvent;
 
     private final Subscription presentCellsSubscription;
 
@@ -94,21 +96,26 @@ final class CellListManager<T, C extends Cell<T, ? extends Node>> {
         EventStreams.nonNullValuesOf(node.sceneProperty())
                 .subscribeForOne(scene -> {
                     node.applyCss();
+
+                    node.addEventHandler(ScrollEvent.ANY, pushToOwner);
+                    EventStreams.valuesOf(node.sceneProperty())
+                            .filter(scene0 -> scene0 == null)
+                            .subscribeForOne(nullValue -> node.removeEventHandler(ScrollEvent.ANY, pushToOwner));
                 });
 
         // Make cell initially invisible.
         // It will be made visible when it is positioned.
         node.setVisible(false);
 
-        if (cell.isReusable()) {
-            // if cell is reused i think adding event handler
-            // would cause resource leakage.
-            node.setOnScroll(this::pushScrollEvent);
-            node.setOnScrollStarted(this::pushScrollEvent);
-            node.setOnScrollFinished(this::pushScrollEvent);
-        } else {
-            node.addEventHandler(ScrollEvent.ANY, this::pushScrollEvent);
-        }
+//        if (cell.isReusable()) {
+//            // if cell is reused i think adding event handler
+//            // would cause resource leakage.
+//            node.setOnScroll(this::pushScrollEvent);
+//            node.setOnScrollStarted(this::pushScrollEvent);
+//            node.setOnScrollFinished(this::pushScrollEvent);
+//        } else {
+//            node.addEventHandler(ScrollEvent.ANY, this::pushScrollEvent);
+//        }
 
         return cell;
     }
